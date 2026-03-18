@@ -11,7 +11,7 @@ While interface guidelines tell you *what* to build, Web Quality Skills tell you
 - **150+ Lighthouse audits** across Performance, Accessibility, SEO, and Best Practices
 - **Core Web Vitals** optimization patterns (LCP, INP, CLS)
 - **Real-world performance engineering** experience
-- **WCAG 2.1** accessibility standards
+- **WCAG 2.2** accessibility standards
 - **Modern SEO** requirements
 
 ## Available skills
@@ -113,7 +113,7 @@ Specialized skill for the three Core Web Vitals that affect Google Search rankin
 
 ### accessibility
 
-Comprehensive accessibility audit following WCAG 2.1 guidelines.
+Comprehensive accessibility audit following WCAG 2.2 guidelines.
 
 **Trigger phrases:** "accessibility", "a11y", "WCAG", "screen reader", "keyboard navigation"
 
@@ -204,7 +204,7 @@ Contributions welcome! Please follow the [Agent Skills specification](https://ag
 - [Google Lighthouse Documentation](https://developer.chrome.com/docs/lighthouse/)
 - [web.dev Learn Performance](https://web.dev/learn/performance/)
 - [Core Web Vitals](https://web.dev/articles/vitals)
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+- [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
 - [Agent Skills Specification](https://agentskills.io/specification)
 
 ## License
