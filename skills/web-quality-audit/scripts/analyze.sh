@@ -1,20 +1,32 @@
 #!/bin/bash
-set -e
+# Read-only HTML quality analyzer (v2). No filesystem mutations.
+# stderr = human logs, stdout = structured JSON.
+set -euo pipefail
 
-# Web Quality Audit Script
-# Analyzes HTML files for common quality issues
+MAX_FINDINGS=100
 
-usage() {
-  echo "Usage: $0 <file_or_directory>" >&2
-  echo "Analyzes HTML files for web quality issues." >&2
+fail() {
+  local type="$1" msg="$2" suggestion="$3"
+  if command -v jq >/dev/null 2>&1; then
+    jq -n \
+      --arg type "$type" \
+      --arg msg "$msg" \
+      --arg suggestion "$suggestion" \
+      '{success: false, error: {type: $type, message: $msg, retryable: false, suggestion: $suggestion}}'
+  else
+    printf '{"success":false,"error":{"type":"%s","message":"%s","suggestion":"%s","retryable":false}}\n' \
+      "$type" "$msg" "$suggestion"
+  fi
   exit 1
 }
 
-if [ -z "$1" ]; then
-  usage
-fi
+command -v jq >/dev/null 2>&1 || \
+  fail "missing_dependency" "jq is required for safe JSON output" "Install: brew install jq"
 
+[ $# -ge 1 ] || fail "invalid_input" "No target provided" "Usage: $0 <file_or_directory>"
 TARGET="$1"
+[ -e "$TARGET" ] || fail "invalid_input" "Target not found: $TARGET" "Pass an existing file or directory path"
+
 ISSUES=()
 WARNINGS=()
 
@@ -22,70 +34,64 @@ analyze_html() {
   local file="$1"
   echo "Analyzing: $file" >&2
 
-  # Check for doctype
-  if ! grep -qi "<!doctype html>" "$file"; then
-    ISSUES+=("$file: Missing HTML5 doctype")
-  fi
+  grep -qi "<!doctype html>"     "$file" || ISSUES+=("$file:0: Missing HTML5 doctype")
+  grep -qi 'charset.*utf-8'      "$file" || WARNINGS+=("$file:0: Missing or non-UTF-8 charset")
+  grep -qi 'name="viewport"'     "$file" || ISSUES+=("$file:0: Missing viewport meta tag")
+  grep -qi '<html[^>]*lang='     "$file" || ISSUES+=("$file:0: Missing lang attribute on <html>")
+  grep -qi '<title>'             "$file" || ISSUES+=("$file:0: Missing <title> tag")
 
-  # Check for charset
-  if ! grep -qi 'charset.*utf-8' "$file"; then
-    WARNINGS+=("$file: Missing or non-UTF-8 charset declaration")
-  fi
+  # <img> without alt — two-pass replaces broken PCRE lookahead
+  while IFS=: read -r ln tag; do
+    grep -qE 'alt=' <<<"$tag" || WARNINGS+=("$file:$ln: <img> without alt attribute")
+  done < <(grep -noE '<img[^>]*>' "$file" || true)
 
-  # Check for viewport
-  if ! grep -qi 'name="viewport"' "$file"; then
-    ISSUES+=("$file: Missing viewport meta tag")
-  fi
-
-  # Check for lang attribute
-  if ! grep -qi '<html.*lang=' "$file"; then
-    ISSUES+=("$file: Missing lang attribute on <html>")
-  fi
-
-  # Check for images without alt
-  if grep -qE '<img[^>]*>' "$file" && grep -qE '<img(?![^>]*alt=)[^>]*>' "$file" 2>/dev/null; then
-    WARNINGS+=("$file: Possible images without alt text")
-  fi
-
-  # Check for title tag
-  if ! grep -qi '<title>' "$file"; then
-    ISSUES+=("$file: Missing <title> tag")
-  fi
-
-  # Check for HTTPS in links
-  if grep -qE 'http://' "$file"; then
-    WARNINGS+=("$file: Contains non-HTTPS URLs")
-  fi
+  # Non-HTTPS URLs with line numbers
+  while IFS=: read -r ln _; do
+    WARNINGS+=("$file:$ln: Non-HTTPS URL")
+  done < <(grep -noE 'http://[^"'\''[:space:]>]*' "$file" || true)
 }
 
-# Process files
+# Process substitution keeps arrays in main shell (fixes v1 subshell bug)
 if [ -d "$TARGET" ]; then
-  find "$TARGET" -name "*.html" -o -name "*.htm" | while read -r file; do
+  while IFS= read -r -d '' file; do
     analyze_html "$file"
-  done
+  done < <(find "$TARGET" \( -name "*.html" -o -name "*.htm" \) -print0)
 elif [ -f "$TARGET" ]; then
   analyze_html "$TARGET"
-else
-  echo "Error: $TARGET is not a valid file or directory" >&2
-  exit 1
 fi
 
-# Output results as JSON
-echo '{'
-echo '  "issues": ['
-for i in "${!ISSUES[@]}"; do
-  if [ $i -gt 0 ]; then echo ','; fi
-  echo -n "    \"${ISSUES[$i]}\""
-done
-echo ''
-echo '  ],'
-echo '  "warnings": ['
-for i in "${!WARNINGS[@]}"; do
-  if [ $i -gt 0 ]; then echo ','; fi
-  echo -n "    \"${WARNINGS[$i]}\""
-done
-echo ''
-echo '  ],'
-echo "  \"issueCount\": ${#ISSUES[@]},"
-echo "  \"warningCount\": ${#WARNINGS[@]}"
-echo '}'
+issue_total=${#ISSUES[@]}
+warning_total=${#WARNINGS[@]}
+
+to_json_array() {
+  printf '%s\n' "$@" | jq -Rs 'split("\n") | map(select(length > 0))'
+}
+
+if [ "$issue_total" -gt 0 ]; then
+  issues_json=$(to_json_array "${ISSUES[@]:0:$MAX_FINDINGS}")
+else
+  issues_json='[]'
+fi
+
+if [ "$warning_total" -gt 0 ]; then
+  warnings_json=$(to_json_array "${WARNINGS[@]:0:$MAX_FINDINGS}")
+else
+  warnings_json='[]'
+fi
+
+echo "Scanned. $issue_total issues, $warning_total warnings." >&2
+
+jq -n \
+  --argjson issues "$issues_json" \
+  --argjson warnings "$warnings_json" \
+  --argjson issue_total "$issue_total" \
+  --argjson warning_total "$warning_total" \
+  --argjson max "$MAX_FINDINGS" \
+  '{
+    success: true,
+    issues: $issues,
+    warnings: $warnings,
+    issueCount: $issue_total,
+    warningCount: $warning_total,
+    truncated: (($issue_total > $max) or ($warning_total > $max))
+  }'
