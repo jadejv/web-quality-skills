@@ -72,6 +72,8 @@ if [ -d "$TARGET" ]; then
   done < <(find "$TARGET" \( -name "*.html" -o -name "*.htm" \) -print0)
 elif [ -f "$TARGET" ]; then
   analyze_html "$TARGET"
+else
+  fail "invalid_input" "Target is not a regular file or directory: $TARGET" "Pass a path to an .html/.htm file or a directory"
 fi
 
 issue_total=${#ISSUES[@]}
