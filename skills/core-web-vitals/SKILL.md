@@ -122,16 +122,23 @@ function processLargeArray(items) {
   items.forEach(item => expensiveOperation(item));
 }
 
-// ✅ Break into chunks with yielding
+// ✅ Break into chunks and yield to the scheduler. scheduler.yield() is the
+//    recommended modern API — its continuation is queued at a boosted
+//    priority so the rest of your work resumes ahead of unrelated tasks,
+//    while still letting the browser handle pending input first.
 async function processLargeArray(items) {
   const CHUNK_SIZE = 100;
   for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-    const chunk = items.slice(i, i + CHUNK_SIZE);
-    chunk.forEach(item => expensiveOperation(item));
-    
-    // Yield to main thread
-    await new Promise(r => setTimeout(r, 0));
-    // Or use scheduler.yield() when available
+    items.slice(i, i + CHUNK_SIZE).forEach(expensiveOperation);
+
+    if ('scheduler' in window && 'yield' in scheduler) {
+      await scheduler.yield();
+    } else {
+      // Fallback for browsers without scheduler.yield (Safari, older Firefox).
+      // setTimeout(0) yields but loses priority — your continuation may run
+      // after unrelated tasks the browser picked up in between.
+      await new Promise(r => setTimeout(r, 0));
+    }
   }
 }
 ```
@@ -148,19 +155,26 @@ button.addEventListener('click', () => {
   trackEvent('click');
 });
 
-// ✅ Prioritize visual feedback
-button.addEventListener('click', () => {
-  // Immediate visual feedback
+// ✅ Prioritize visual feedback, then yield before doing the heavy work
+button.addEventListener('click', async () => {
+  // 1. Immediate visual feedback (cheap DOM update)
   button.classList.add('loading');
-  
-  // Defer non-critical work
-  requestAnimationFrame(() => {
-    const result = calculateComplexThing();
-    updateUI(result);
-  });
-  
-  // Use requestIdleCallback for analytics
-  requestIdleCallback(() => trackEvent('click'));
+
+  // 2. Yield so the browser can paint the loading state before we block
+  if ('scheduler' in window && 'yield' in scheduler) {
+    await scheduler.yield();
+  }
+
+  // 3. Now do the heavy work — the user already saw the click register
+  const result = calculateComplexThing();
+  updateUI(result);
+
+  // 4. Lowest-priority work last, when the main thread is idle
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => trackEvent('click'));
+  } else {
+    setTimeout(() => trackEvent('click'), 0);
+  }
 });
 ```
 
@@ -218,7 +232,10 @@ function App() {
 
 ### INP debugging
 ```javascript
-// Identify slow interactions
+// Identify slow interactions. durationThreshold: 40 matches what the
+// web-vitals library uses — 16 (one frame) fires on nearly every interaction
+// and drowns the console; 40 surfaces interactions that are starting to feel
+// sluggish without spamming.
 new PerformanceObserver((list) => {
   for (const entry of list.getEntries()) {
     if (entry.duration > 200) {
@@ -231,8 +248,10 @@ new PerformanceObserver((list) => {
       });
     }
   }
-}).observe({ type: 'event', buffered: true, durationThreshold: 16 });
+}).observe({ type: 'event', buffered: true, durationThreshold: 40 });
 ```
+
+For field debugging across real users, prefer the `web-vitals/attribution` build of the [web-vitals library](https://github.com/GoogleChrome/web-vitals) — `onINP()` from that build attaches a `LoAF` (Long Animation Frame) breakdown identifying the longest script and the input/processing/presentation phase that ate the budget.
 
 ---
 
