@@ -310,6 +310,31 @@ requestAnimationFrame(animate);
 }
 ```
 
+### Smooth navigations with View Transitions
+
+The [View Transitions API](https://developer.chrome.com/docs/web-platform/view-transitions) lets the browser cross-fade (or custom-animate) between two DOM states using a single GPU-composited snapshot — no double-render, no layout thrash, and the snapshot doesn't count toward CLS.
+
+**Same-document (SPA-style) — Baseline 2026:**
+```javascript
+// Wrap the DOM mutation that swaps the view
+function navigate(newView) {
+  if (!document.startViewTransition) return swapDOM(newView);
+  document.startViewTransition(() => swapDOM(newView));
+}
+```
+
+**Cross-document (MPA-style) — Chromium-stable, progressive enhancement elsewhere:**
+```css
+/* On both source and destination pages */
+@view-transition { navigation: auto; }
+```
+That's the entire integration — same-origin navigations now fade automatically. To opt specific elements into shared-element transitions (e.g. a thumbnail expanding into a hero), give them a matching `view-transition-name`:
+```css
+.product-thumb[data-id="42"], .product-hero { view-transition-name: product-42; }
+```
+
+Pair this with Speculation Rules (above) for instant + animated navigations.
+
 ## Third-party scripts
 
 ### Load strategies
