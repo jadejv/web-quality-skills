@@ -47,6 +47,16 @@ Or manually:
 cp -r skills/* ~/.claude/skills/
 ```
 
+#### Gemini CLI
+
+Install directly via Gemini CLI extensions:
+
+```bash
+gemini extensions install https://github.com/addyosmani/web-quality-skills
+```
+
+Skills are auto-discovered by Gemini and activate when prompts match their description. See [docs/gemini-setup.md](docs/gemini-setup.md) for workspace mode and troubleshooting.
+
 #### claude.ai
 
 Add skills to your project knowledge or paste the SKILL.md contents into your conversation.
