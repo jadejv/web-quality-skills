@@ -58,6 +58,16 @@ Install as a versioned, namespaced plugin from inside Claude Code:
 
 Skills are then namespaced (e.g. `/web-quality-skills:performance`) and update with `/plugin update`. The plugin reads the same `skills/` directory as the manual copy above — no duplication.
 
+#### Codex
+
+Install directly via the Codex plugin marketplace (Codex CLI v0.122+):
+
+```bash
+codex plugin marketplace add addyosmani/web-quality-skills
+```
+
+Once installed, invoke skills in chat using `@` (e.g. `@performance`, `@accessibility`). See [docs/codex-setup.md](docs/codex-setup.md) for local installation and troubleshooting.
+
 #### claude.ai
 
 Add skills to your project knowledge or paste the SKILL.md contents into your conversation.
