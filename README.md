@@ -47,6 +47,17 @@ Or manually:
 cp -r skills/* ~/.claude/skills/
 ```
 
+#### Claude Code (plugin)
+
+Install as a versioned, namespaced plugin from inside Claude Code:
+
+```text
+/plugin marketplace add addyosmani/web-quality-skills
+/plugin install web-quality-skills@addy-web-quality-skills
+```
+
+Skills are then namespaced (e.g. `/web-quality-skills:performance`) and update with `/plugin update`. The plugin reads the same `skills/` directory as the manual copy above — no duplication.
+
 #### Codex
 
 Install directly via the Codex plugin marketplace (Codex CLI v0.122+):
