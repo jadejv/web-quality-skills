@@ -9,10 +9,7 @@
   "plugins": [
     {
       "name": "web-quality-skills",
-      "source": {
-        "source": "github",
-        "repo": "addyosmani/web-quality-skills"
-      },
+      "source": "./",
       "description": "Performance, Core Web Vitals, accessibility, SEO, and best-practices skills for any web stack."
     }
   ]
