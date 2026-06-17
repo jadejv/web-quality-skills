@@ -1,10 +1,10 @@
 ---
 name: seo
-description: Optimize for search engine visibility and ranking. Use when asked to "improve SEO", "optimize for search", "fix meta tags", "add structured data", "sitemap optimization", or "search engine optimization".
+description: Optimize for search engine visibility and ranking. Use when asked to "improve SEO", "optimize for search", "fix meta tags", "add structured data", "sitemap optimization", "image SEO", "image authorship", "brand images", "copyright images", or "search engine optimization".
 license: MIT
 metadata:
   author: web-quality-skills
-  version: "1.0"
+  version: "1.1"
 ---
 
 # SEO optimization
@@ -220,6 +220,8 @@ X-Frame-Options: DENY
 - Compressed and properly sized
 - WebP/AVIF with fallbacks
 - Lazy load below-fold images
+
+**Brand, authorship, and copyright (images):** Follow [IMAGE-BRAND-AUTHORSHIP.md](references/IMAGE-BRAND-AUTHORSHIP.md). Only recommend tactics documented by Google Search Central. Do not invent Schema fields or claim unproven LLM-specific image signals. High impact first: indexable landing page + `<img alt>` + `ImageObject` JSON-LD (and visible license/credit lines) on every page that shows the image.
 
 ### Internal linking
 
@@ -523,5 +525,6 @@ body {
 
 - [Google Search Central](https://developers.google.com/search)
 - [Schema.org](https://schema.org/)
+- [Image brand & authorship](references/IMAGE-BRAND-AUTHORSHIP.md)
 - [Core Web Vitals](../core-web-vitals/SKILL.md)
 - [Web Quality Audit](../web-quality-audit/SKILL.md)
